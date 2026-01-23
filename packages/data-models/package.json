@@ -1,0 +1,37 @@
+{
+  "name": "@event-streaming-platform/data-models",
+  "version": "0.1.0",
+  "description": "Shared Mongoose schemas and model factories for Event Streaming Platform services",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "mongoose": ">=7 <9"
+  },
+  "devDependencies": {
+    "mongoose": "^8.17.1",
+    "tsup": "^8.2.4",
+    "typescript": "^5.3.0"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-linux-x64-musl": "^4.55.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepare": "npm run build"
+  }
+}

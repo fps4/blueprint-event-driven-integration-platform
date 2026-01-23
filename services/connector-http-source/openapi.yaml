@@ -1,0 +1,62 @@
+openapi: 3.1.0
+info:
+  title: Connector HTTP Source API
+  version: 0.1.0
+  description: Ingest HTTP payloads into Kafka topics.
+servers:
+  - url: http://localhost:8081
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      responses:
+        "200":
+          description: Service is healthy.
+          headers:
+            x-request-id:
+              $ref: ../../packages/openapi-components/connectors.yaml#/components/headers/RequestId
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/connectors.yaml#/components/schemas/HealthResponse
+  /ingest/{topic}:
+    post:
+      summary: Ingest payload into a topic
+      operationId: ingestTopic
+      parameters:
+        - $ref: ../../packages/openapi-components/connectors.yaml#/components/parameters/TopicParam
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: ../../packages/openapi-components/connectors.yaml#/components/schemas/IngestPayload
+      responses:
+        "202":
+          description: Accepted for ingestion.
+          headers:
+            x-request-id:
+              $ref: ../../packages/openapi-components/connectors.yaml#/components/headers/RequestId
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/connectors.yaml#/components/schemas/AcceptedResponse
+        "400":
+          description: Invalid topic or payload.
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/connectors.yaml#/components/schemas/ErrorResponse
+        "415":
+          description: Unsupported content type.
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/connectors.yaml#/components/schemas/ErrorResponse
+        "500":
+          description: Internal error.
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/connectors.yaml#/components/schemas/ErrorResponse

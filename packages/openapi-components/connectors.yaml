@@ -1,0 +1,78 @@
+openapi: 3.1.0
+info:
+  title: Connector Shared Components
+  version: 0.1.0
+  description: Reusable OpenAPI components for connector services.
+components:
+  schemas:
+    TopicName:
+      type: string
+      description: >
+        Kafka-compatible topic name. Trimmed, must not be '.' or '..', only letters, numbers, '.', '_' or '-'.
+      pattern: "^[A-Za-z0-9._-]{1,249}$"
+      minLength: 1
+      maxLength: 249
+      examples:
+        - events
+        - users.created
+    IngestPayload:
+      oneOf:
+        - type: object
+          minProperties: 1
+          additionalProperties: true
+        - type: array
+          minItems: 1
+          items: {}
+      description: Non-empty JSON object or array payload to ingest.
+    AcceptedResponse:
+      type: object
+      required:
+        - status
+        - topic
+      properties:
+        status:
+          type: string
+          const: accepted
+        topic:
+          $ref: "#/components/schemas/TopicName"
+        requestId:
+          type: string
+          description: Echoed request id for traceability.
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          const: ok
+        requestId:
+          type: string
+          description: Echoed request id for traceability.
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+          const: error
+        message:
+          type: string
+        requestId:
+          type: string
+          description: Echoed request id for traceability.
+  parameters:
+    TopicParam:
+      name: topic
+      in: path
+      required: true
+      description: Target Kafka topic name.
+      schema:
+        $ref: "#/components/schemas/TopicName"
+  headers:
+    RequestId:
+      description: Correlation id; generated if not provided. Returned in responses.
+      schema:
+        type: string
