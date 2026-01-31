@@ -56,15 +56,12 @@ export function tokenExpired(exp) {
   const timeLeft = exp * 1000 - currentTime;
 
   setTimeout(() => {
-    try {
-      alert('Token expired!');
-      sessionStorage.removeItem(JWT_STORAGE_KEY);
-      sessionStorage.removeItem(JWT_USER_STORAGE_KEY);
-      window.location.href = paths.auth.jwt.signIn;
-    } catch (error) {
-      console.error('Error during token expiration:', error);
-      throw error;
-    }
+    sessionStorage.removeItem(JWT_STORAGE_KEY);
+    sessionStorage.removeItem(JWT_USER_STORAGE_KEY);
+    const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    const query = new URLSearchParams({ returnTo }).toString();
+    const loginUrl = `${paths.auth.jwt.signIn}?${query}`;
+    window.location.replace(loginUrl);
   }, timeLeft);
 }
 

@@ -7,12 +7,7 @@ import { CONFIG } from 'src/global-config';
 const axiosInstance = axios.create({ baseURL: CONFIG.serverUrl });
 const authAxiosInstance = axios.create({ baseURL: CONFIG.authServerUrl || CONFIG.serverUrl });
 
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+axiosInstance.interceptors.response.use((response) => response, (error) => Promise.reject(error));
 
 authAxiosInstance.interceptors.response.use(
   (response) => response,

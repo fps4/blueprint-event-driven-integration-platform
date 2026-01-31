@@ -1,4 +1,5 @@
 import express from 'express';
+import { randomUUID } from 'crypto';
 import { makeModels } from '@event-streaming-platform/data-models';
 import { getConnection } from './db';
 import { componentLogger } from './logger';
@@ -72,9 +73,10 @@ export function buildRouter() {
   router.post('/workspaces', async (req, res) => {
     const conn = await getConnection();
     const { Workspace } = makeModels(conn);
-    const _id = toId(req.body?.id || req.body?._id);
+    const providedId = toId(req.body?.id || req.body?._id);
+    const _id = providedId || randomUUID();
     const name = String(req.body?.name || '').trim();
-    if (!_id || !name) return res.status(400).json({ error: 'id and name are required' });
+    if (!name) return res.status(400).json({ error: 'name is required' });
     const created = await Workspace.create({ _id, name, status: 'active', allowedOrigins: req.body?.allowedOrigins || [] });
     log.info({ workspaceId: _id }, 'workspace created');
     res.status(201).json(created);

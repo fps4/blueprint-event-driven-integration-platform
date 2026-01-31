@@ -10,7 +10,7 @@ import { SvgColor } from 'src/components/svg-color';
 const icon = (name) => <SvgColor src={`${CONFIG.assetsDir}/assets/icons/navbar/${name}.svg`} />;
 
 const ICONS = {
-  job: icon('ic-job'),
+   job: icon('ic-job'),
   blog: icon('ic-blog'),
   chat: icon('ic-chat'),
   mail: icon('ic-mail'),
@@ -55,6 +55,7 @@ export const navData = [
       },
       { title: 'Two', path: paths.dashboard.two, icon: ICONS.ecommerce },
       { title: 'Three', path: paths.dashboard.three, icon: ICONS.analytics },
+      { title: 'Workspaces', path: paths.dashboard.workspace.root, icon: ICONS.folder },
     ],
   },
   /**

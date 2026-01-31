@@ -45,6 +45,13 @@ export const paths = {
     root: ROOTS.DASHBOARD,
     two: `${ROOTS.DASHBOARD}/two`,
     three: `${ROOTS.DASHBOARD}/three`,
+    workspace: {
+      root: `${ROOTS.DASHBOARD}/workspace`,
+      new: `${ROOTS.DASHBOARD}/workspace/new`,
+      details: (id) => `${ROOTS.DASHBOARD}/workspace/${id}`,
+      edit: (id) => `${ROOTS.DASHBOARD}/workspace/${id}/edit`,
+
+    },
     group: {
       root: `${ROOTS.DASHBOARD}/group`,
       five: `${ROOTS.DASHBOARD}/group/five`,
