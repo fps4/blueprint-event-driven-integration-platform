@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 
+import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
-import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import CardContent from '@mui/material/CardContent';
+import CardActionArea from '@mui/material/CardActionArea';
 
 import { paths } from 'src/routes/paths';
 import { RouterLink } from 'src/routes/components';
@@ -15,10 +16,12 @@ import { RouterLink } from 'src/routes/components';
 import { listWorkspaces } from 'src/api/workspace';
 import { DashboardContent } from 'src/layouts/dashboard';
 
+import { Iconify } from 'src/components/iconify';
 import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 export function WorkspaceListView() {
   const [workspaces, setWorkspaces] = useState([]);
+  const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -37,11 +40,23 @@ export function WorkspaceListView() {
   }, []);
 
   const renderCard = (ws) => (
-    <Grid item key={ws.id} xs={12} sm={6} md={4}> 
-      <Card variant="outlined">
-        <CardContent>
+    <Card key={ws.id} sx={{ minWidth: 240 }}>
+      <CardActionArea
+        onClick={() => setSelectedId(ws.id)}
+        data-active={selectedId === ws.id ? '' : undefined}
+        sx={{
+          height: '100%',
+          '&[data-active]': {
+            backgroundColor: 'action.selected',
+            '&:hover': {
+              backgroundColor: 'action.selectedHover',
+            },
+          },
+        }}
+      >
+        <CardContent sx={{ height: '100%' }}>
           <Stack spacing={1}>
-            <Typography variant="subtitle1">{ws.name}</Typography>
+            <Typography variant="h4">{ws.name}</Typography>
             <Typography variant="body2" color="text.secondary">
               Status: {ws.status || 'unknown'}
             </Typography>
@@ -50,20 +65,10 @@ export function WorkspaceListView() {
                 ? `${ws.allowedOrigins.length} allowed origin(s)`
                 : 'No allowed origins'}
             </Typography>
-            <Stack direction="row" spacing={1} sx={{ pt: 1 }}>
-              <Button
-                size="small"
-                variant="outlined"
-                component={RouterLink}
-                href={paths.dashboard.workspace.edit(ws.id)}
-              >
-                Edit
-              </Button>
-            </Stack>
           </Stack>
         </CardContent>
-      </Card>
-    </Grid>
+      </CardActionArea>
+    </Card>
   );
 
   const empty = !loading && !workspaces.length;
@@ -77,8 +82,13 @@ export function WorkspaceListView() {
           { name: 'Workspaces', href: paths.dashboard.workspace.root },
         ]}
         action={
-          <Button component={RouterLink} href={paths.dashboard.workspace.new} variant="contained">
-            Create workspace
+          <Button 
+            component={RouterLink} 
+            href={paths.dashboard.workspace.new} 
+            variant="contained"
+            startIcon={<Iconify icon="mingcute:add-line" />}
+            >
+            Add Workspace
           </Button>
         }
         sx={{ mb: { xs: 3, md: 5 } }}
@@ -90,20 +100,25 @@ export function WorkspaceListView() {
         </Typography>
       )}
 
-      <Grid container spacing={3}>
+      <Box
+        sx={{
+          width: '100%',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))',
+          gap: 3,
+        }}
+      >
         {workspaces.map(renderCard)}
         {empty && (
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="body2" color="text.secondary">
-                  No workspaces yet.
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+          <Card>
+            <CardContent>
+              <Typography variant="body2" color="text.secondary">
+                No workspaces yet.
+              </Typography>
+            </CardContent>
+          </Card>
         )}
-      </Grid>
+      </Box>
     </DashboardContent>
   );
 }
