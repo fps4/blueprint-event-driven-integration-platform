@@ -16,6 +16,7 @@ Use this as the entry point for all platform docs.
     - [Worker / Transform Runtime](./components/workers.md)
     - [Authorizer](./components/authorizer.md)
     - [Data Models](./components/data-models.md)
+    - [OpenAPI Design & Architecture](./components/openapi.md)
 - Architecture assets
   - Structurizr workspace: `architecture/structurizr/workspace.dsl`
   - Whiteboard diagrams: `diagrams/`

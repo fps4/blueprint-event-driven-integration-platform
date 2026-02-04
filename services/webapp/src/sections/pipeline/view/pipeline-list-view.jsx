@@ -8,8 +8,8 @@ import Typography from '@mui/material/Typography';
 import { DataGrid, gridClasses, GridToolbarQuickFilter } from '@mui/x-data-grid';
 
 import { paths } from 'src/routes/paths';
-import { RouterLink } from 'src/routes/components';
 import { useRouter } from 'src/routes/hooks';
+import { RouterLink } from 'src/routes/components';
 
 import { listPipelines } from 'src/api/pipeline';
 import { DashboardContent } from 'src/layouts/dashboard';
@@ -62,12 +62,6 @@ export function PipelineListView() {
         headerName: 'Target',
         flex: 1,
         minWidth: 160,
-      },
-      {
-        field: 'description',
-        headerName: 'Description',
-        flex: 1,
-        minWidth: 240,
       },
     ],
     []

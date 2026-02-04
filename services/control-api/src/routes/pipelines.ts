@@ -14,6 +14,18 @@ export function pipelineRoutes() {
     res.json({ items });
   });
 
+  router.get('/pipelines/:pipelineId', async (req, res) => {
+    const conn = await getConnection();
+    const { Pipeline } = makeModels(conn);
+    const _id = toId(req.params.pipelineId);
+    if (!_id) return res.status(400).json({ error: 'pipelineId is required' });
+    
+    const doc = await Pipeline.findOne({ _id }).lean().exec();
+    if (!doc) return res.status(404).json({ error: 'pipeline not found' });
+    
+    res.json(doc);
+  });
+
   router.post('/pipelines', async (req, res) => {
     const conn = await getConnection();
     const { Pipeline } = makeModels(conn);

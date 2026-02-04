@@ -1,0 +1,890 @@
+openapi: 3.1.0
+info:
+  title: Control API Shared Components
+  version: 0.1.0
+  description: Reusable OpenAPI components for control-plane services (control-api, authorizer).
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT issued by Authorizer service with workspace-scoped claims (session, principal, scopes, topics).
+
+  parameters:
+    WorkspaceIdParam:
+      name: workspaceId
+      in: path
+      required: true
+      description: Unique workspace identifier (UUID or slug).
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 100
+        examples:
+          - workspace-123
+          - 550e8400-e29b-41d4-a716-446655440000
+
+    PipelineIdParam:
+      name: pipelineId
+      in: path
+      required: true
+      description: Unique pipeline identifier (UUID).
+      schema:
+        type: string
+        format: uuid
+        examples:
+          - 550e8400-e29b-41d4-a716-446655440001
+
+    ClientIdParam:
+      name: clientId
+      in: path
+      required: true
+      description: Unique client identifier (UUID).
+      schema:
+        type: string
+        format: uuid
+
+    UserIdParam:
+      name: userId
+      in: path
+      required: true
+      description: Unique user identifier (UUID).
+      schema:
+        type: string
+        format: uuid
+
+    TransformIdParam:
+      name: transformId
+      in: path
+      required: true
+      description: Unique Jsonata transform identifier (UUID).
+      schema:
+        type: string
+        format: uuid
+
+    TopicNameParam:
+      name: topicName
+      in: path
+      required: true
+      description: Kafka topic name.
+      schema:
+        $ref: "#/components/schemas/TopicName"
+
+    PageQuery:
+      name: page
+      in: query
+      description: Page number for pagination (1-indexed).
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    PerPageQuery:
+      name: perPage
+      in: query
+      description: Number of items per page.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  headers:
+    RequestId:
+      description: Correlation id for request tracing (generated if not provided).
+      schema:
+        type: string
+        format: uuid
+
+    XWorkspaceId:
+      description: Optional workspace context header for scoped requests.
+      schema:
+        type: string
+
+  schemas:
+    # ===== Core Domain Models =====
+
+    Workspace:
+      type: object
+      required:
+        - _id
+        - name
+        - status
+      properties:
+        _id:
+          type: string
+          description: Unique workspace identifier.
+          examples:
+            - workspace-acme
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Human-readable workspace name.
+          examples:
+            - ACME Corporation
+        status:
+          type: string
+          enum: [active, inactive]
+          description: Workspace operational status.
+        allowedOrigins:
+          type: array
+          items:
+            type: string
+            format: uri
+          description: CORS allowed origins for this workspace.
+          examples:
+            - ["https://app.acme.com", "https://admin.acme.com"]
+        description:
+          type: string
+          maxLength: 500
+          description: Workspace description or notes.
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when workspace was created.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Timestamp of last update.
+
+    Pipeline:
+      type: object
+      required:
+        - _id
+        - workspaceId
+        - name
+        - status
+      properties:
+        _id:
+          type: string
+          format: uuid
+          description: Unique pipeline identifier.
+        workspaceId:
+          type: string
+          description: Parent workspace identifier.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Pipeline name.
+          examples:
+            - User Events Enrichment
+        description:
+          type: string
+          maxLength: 1000
+          description: Pipeline description or purpose.
+        status:
+          type: string
+          enum: [draft, active, paused, failed]
+          description: Pipeline operational status.
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamDefinition"
+          description: Source and sink topic definitions.
+        sourceClients:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientConfigRef"
+          description: Clients producing to source topics.
+        sinkClients:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientConfigRef"
+          description: Clients consuming from sink topics.
+        transform:
+          $ref: "#/components/schemas/TransformConfig"
+          nullable: true
+          description: Optional transformation configuration.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    StreamDefinition:
+      type: object
+      required:
+        - topic
+        - type
+      properties:
+        topic:
+          $ref: "#/components/schemas/TopicName"
+        type:
+          type: string
+          enum: [source, sink]
+          description: Stream role in pipeline.
+        description:
+          type: string
+          maxLength: 200
+
+    ClientConfigRef:
+      type: object
+      required:
+        - clientId
+        - role
+      properties:
+        clientId:
+          type: string
+          format: uuid
+          description: Reference to Client entity.
+        role:
+          type: string
+          enum: [source, sink]
+          description: Client's role in the pipeline.
+        description:
+          type: string
+          maxLength: 200
+
+    TransformConfig:
+      type: object
+      required:
+        - type
+        - transformId
+      properties:
+        type:
+          type: string
+          enum: [jsonata]
+          description: Transform engine type.
+        transformId:
+          type: string
+          format: uuid
+          description: Reference to JsonataTransform entity.
+
+    Client:
+      type: object
+      required:
+        - _id
+        - workspaceId
+        - status
+        - secretHash
+      properties:
+        _id:
+          type: string
+          format: uuid
+          description: Unique client identifier.
+        workspaceId:
+          type: string
+          description: Parent workspace identifier.
+        name:
+          type: string
+          maxLength: 100
+          description: Client name or label.
+        status:
+          type: string
+          enum: [active, inactive]
+          description: Client operational status.
+        secretHash:
+          type: string
+          description: Hashed client secret (never return plaintext).
+          writeOnly: true
+        secretSalt:
+          type: string
+          nullable: true
+          description: Salt for secret hashing.
+          writeOnly: true
+        allowedScopes:
+          type: array
+          items:
+            type: string
+          description: OAuth-style scopes granted to client.
+          examples:
+            - ["ingest:write", "topics:read"]
+        allowedTopics:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopicName"
+          description: Topic access control list (wildcards supported).
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      required:
+        - _id
+        - workspaceId
+        - username
+        - status
+      properties:
+        _id:
+          type: string
+          format: uuid
+          description: Unique user identifier.
+        workspaceId:
+          type: string
+          description: Parent workspace identifier.
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: "^[a-zA-Z0-9._-]+$"
+          description: Unique username within workspace.
+        passwordHash:
+          type: string
+          nullable: true
+          description: Hashed password (never return plaintext).
+          writeOnly: true
+        passwordSalt:
+          type: string
+          nullable: true
+          writeOnly: true
+        roles:
+          type: array
+          items:
+            type: string
+          description: User roles for RBAC.
+          examples:
+            - ["admin", "developer"]
+        status:
+          type: string
+          enum: [active, inactive]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    JsonataTransform:
+      type: object
+      required:
+        - _id
+        - workspaceId
+        - name
+        - version
+        - expression
+        - sourceTopic
+        - targetTopic
+        - status
+      properties:
+        _id:
+          type: string
+          format: uuid
+          description: Unique transform identifier.
+        workspaceId:
+          type: string
+          description: Parent workspace identifier.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Transform name.
+        description:
+          type: string
+          maxLength: 1000
+        version:
+          type: integer
+          minimum: 1
+          description: Transform version number (monotonically increasing).
+        expression:
+          type: string
+          minLength: 1
+          description: Jsonata transformation expression.
+          examples:
+            - "$merge([payload, {'enriched': true}])"
+        sourceTopic:
+          $ref: "#/components/schemas/TopicName"
+          description: Input topic for transformation.
+        targetTopic:
+          $ref: "#/components/schemas/TopicName"
+          description: Output topic for transformed data.
+        sourceSchemaId:
+          type: integer
+          nullable: true
+          description: Schema Registry ID for source topic schema.
+        targetSchemaId:
+          type: integer
+          nullable: true
+          description: Schema Registry ID for target topic schema.
+        status:
+          type: string
+          enum: [draft, active, deprecated]
+          description: Transform lifecycle status.
+        createdBy:
+          type: string
+          description: User ID who created the transform.
+        updatedBy:
+          type: string
+          description: User ID who last updated the transform.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Session:
+      type: object
+      required:
+        - _id
+        - workspaceId
+        - principalId
+        - principalType
+        - status
+        - expiresAt
+      properties:
+        _id:
+          type: string
+          format: uuid
+          description: Unique session identifier (maps to JWT jti claim).
+        workspaceId:
+          type: string
+          description: Workspace context for session.
+        principalId:
+          type: string
+          description: Client or User ID.
+        principalType:
+          type: string
+          enum: [client, user]
+          description: Type of principal (client or user).
+        scopes:
+          type: array
+          items:
+            type: string
+          description: Granted scopes for this session.
+        topics:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopicName"
+          description: Allowed topics for this session.
+        context:
+          type: object
+          additionalProperties: true
+          description: Arbitrary session metadata.
+        status:
+          type: string
+          enum: [active, revoked]
+          description: Session validity status.
+        expiresAt:
+          type: string
+          format: date-time
+          description: Session expiration timestamp.
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    # ===== Common Primitives =====
+
+    TopicName:
+      type: string
+      description: >
+        Kafka topic name following platform conventions: `<env>.<workspace>.<stream>.<variant>`.
+        Max 249 chars, only letters, numbers, '.', '_', '-'. Cannot be '.' or '..'.
+      pattern: "^[A-Za-z0-9._-]{1,249}$"
+      minLength: 1
+      maxLength: 249
+      examples:
+        - prod.acme.events.raw
+        - dev.acme.users.enriched
+
+    TopicMetrics:
+      type: object
+      required:
+        - topic
+        - partitions
+      properties:
+        topic:
+          $ref: "#/components/schemas/TopicName"
+        partitions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartitionMetrics"
+        totalMessages:
+          type: integer
+          description: Sum of messages across all partitions.
+        totalLag:
+          type: integer
+          description: Sum of consumer lag across all partitions.
+
+    PartitionMetrics:
+      type: object
+      required:
+        - partition
+        - highWaterMark
+        - lowWaterMark
+      properties:
+        partition:
+          type: integer
+          minimum: 0
+        highWaterMark:
+          type: integer
+          description: Latest offset in partition.
+        lowWaterMark:
+          type: integer
+          description: Earliest available offset.
+        lag:
+          type: integer
+          nullable: true
+          description: Consumer group lag (if applicable).
+
+    # ===== Request/Response Structures =====
+
+    CreateWorkspaceRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        allowedOrigins:
+          type: array
+          items:
+            type: string
+            format: uri
+
+    CreatePipelineRequest:
+      type: object
+      required:
+        - workspaceId
+        - name
+      properties:
+        workspaceId:
+          type: string
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        status:
+          type: string
+          enum: [draft, active, paused, failed]
+          default: draft
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamDefinition"
+        sourceClients:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientConfigRef"
+        sinkClients:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientConfigRef"
+        transform:
+          $ref: "#/components/schemas/TransformConfig"
+          nullable: true
+
+    UpdatePipelineRequest:
+      type: object
+      properties:
+        workspaceId:
+          type: string
+          description: Required for update validation.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        status:
+          type: string
+          enum: [draft, active, paused, failed]
+        streams:
+          type: array
+          items:
+            $ref: "#/components/schemas/StreamDefinition"
+        sourceClients:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientConfigRef"
+        sinkClients:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientConfigRef"
+        transform:
+          $ref: "#/components/schemas/TransformConfig"
+          nullable: true
+
+    CreateClientRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        allowedScopes:
+          type: array
+          items:
+            type: string
+        allowedTopics:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopicName"
+
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: "^[a-zA-Z0-9._-]+$"
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+          writeOnly: true
+        roles:
+          type: array
+          items:
+            type: string
+
+    CreateJsonataTransformRequest:
+      type: object
+      required:
+        - name
+        - expression
+        - sourceTopic
+        - targetTopic
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 1000
+        expression:
+          type: string
+          minLength: 1
+        sourceTopic:
+          $ref: "#/components/schemas/TopicName"
+        targetTopic:
+          $ref: "#/components/schemas/TopicName"
+        sourceSchemaId:
+          type: integer
+          nullable: true
+        targetSchemaId:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [draft, active, deprecated]
+          default: draft
+
+    CreateTopicRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          $ref: "#/components/schemas/TopicName"
+        numPartitions:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 3
+        replicationFactor:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 1
+        config:
+          type: object
+          additionalProperties:
+            type: string
+          description: Kafka topic configuration overrides.
+
+    ListResponse:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          items: {}
+          description: Array of entities (type varies by endpoint).
+        total:
+          type: integer
+          description: Total count of items (for pagination).
+        page:
+          type: integer
+          description: Current page number.
+        perPage:
+          type: integer
+          description: Items per page.
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          const: ok
+        requestId:
+          type: string
+          format: uuid
+
+    ErrorResponse:
+      type: object
+      required:
+        - status
+        - message
+      properties:
+        status:
+          type: string
+          const: error
+        message:
+          type: string
+          description: Human-readable error message.
+        code:
+          type: string
+          description: Machine-readable error code.
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context.
+        requestId:
+          type: string
+          format: uuid
+
+    ValidationErrorResponse:
+      type: object
+      required:
+        - status
+        - message
+        - errors
+      properties:
+        status:
+          type: string
+          const: error
+        message:
+          type: string
+          default: Validation failed
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Field name that failed validation.
+              message:
+                type: string
+                description: Validation error message.
+              value:
+                description: Invalid value provided.
+        requestId:
+          type: string
+          format: uuid
+
+  responses:
+    Success:
+      description: Operation succeeded.
+      headers:
+        x-request-id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: string
+                const: success
+
+    BadRequest:
+      description: Invalid request (malformed syntax, missing required fields).
+      headers:
+        x-request-id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    ValidationError:
+      description: Request validation failed (invalid field values, constraint violations).
+      headers:
+        x-request-id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationErrorResponse"
+
+    Unauthorized:
+      description: Missing or invalid authentication token.
+      headers:
+        x-request-id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            message: Unauthorized
+            code: AUTH_INVALID_TOKEN
+
+    Forbidden:
+      description: Authenticated but insufficient permissions.
+      headers:
+        x-request-id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            message: Forbidden
+            code: AUTH_INSUFFICIENT_PERMISSIONS
+
+    NotFound:
+      description: Requested resource does not exist.
+      headers:
+        x-request-id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: error
+            message: Resource not found
+
+    Conflict:
+      description: Request conflicts with current state (duplicate resource, version mismatch).
+      headers:
+        x-request-id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+
+    InternalServerError:
+      description: Unexpected server error.
+      headers:
+        x-request-id:
+          $ref: "#/components/headers/RequestId"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

@@ -4,7 +4,7 @@ import { PipelineDetailsView } from 'src/sections/pipeline/view/pipeline-details
 
 export const metadata = { title: `Pipeline Details | Dashboard - ${CONFIG.appName}` };
 
-export default function Page({ params }) {
-  const { id } = params;
+export default async function Page({ params }) {
+  const { id } = await params;
   return <PipelineDetailsView pipelineId={id} />;
 }

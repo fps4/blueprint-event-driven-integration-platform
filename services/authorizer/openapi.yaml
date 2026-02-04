@@ -1,0 +1,460 @@
+openapi: 3.1.0
+info:
+  title: Authorizer Service
+  version: 0.1.0
+  description: >
+    Authentication and authorization service that issues JWT tokens for clients and users.
+    Manages workspaces, client credentials, user authentication, and session lifecycle.
+  contact:
+    name: Platform Team
+servers:
+  - url: http://localhost:7305
+    description: Local development
+
+paths:
+  /auth/token:
+    post:
+      summary: Issue a token for machine-to-machine (client) authentication
+      operationId: issueClientToken
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - client_id
+                - client_secret
+                - workspace_id
+              properties:
+                client_id:
+                  type: string
+                  format: uuid
+                  description: Client identifier (UUID).
+                client_secret:
+                  type: string
+                  description: Client secret for authentication.
+                  writeOnly: true
+                workspace_id:
+                  type: string
+                  description: Workspace that owns the client.
+                scopes:
+                  type: array
+                  items:
+                    type: string
+                  description: Requested scopes (must be allowed for the client).
+                  examples:
+                    - ["ingest:write", "api:read"]
+            examples:
+              clientToken:
+                value:
+                  client_id: "550e8400-e29b-41d4-a716-446655440000"
+                  client_secret: "secret123"
+                  workspace_id: "workspace-acme"
+                  scopes: ["ingest:topic:events.raw"]
+      responses:
+        "201":
+          description: Token issued successfully
+          headers:
+            x-request-id:
+              $ref: ../../packages/openapi-components/control-api.yaml#/components/headers/RequestId
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - sessionId
+                  - token
+                  - expiresIn
+                  - expiresAt
+                  - client_id
+                  - workspace_id
+                  - scopes
+                properties:
+                  sessionId:
+                    type: string
+                    format: uuid
+                    description: Unique session identifier.
+                  token:
+                    type: string
+                    description: HS256 JWT token.
+                  expiresIn:
+                    type: integer
+                    description: Token expiration in seconds.
+                    example: 3600
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    description: Token expiration timestamp.
+                  client_id:
+                    type: string
+                    format: uuid
+                  workspace_id:
+                    type: string
+                  scopes:
+                    type: array
+                    items:
+                      type: string
+        "400":
+          description: Invalid input or scopes not allowed
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/control-api.yaml#/components/schemas/ErrorResponse
+              examples:
+                invalidScopes:
+                  value:
+                    message: "Requested scopes are not allowed"
+                invalidInput:
+                  value:
+                    message: "client_id, client_secret, and workspace_id are required"
+        "401":
+          description: Invalid client credentials
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/control-api.yaml#/components/schemas/ErrorResponse
+              example:
+                message: "Invalid client credentials"
+        "404":
+          description: Client or workspace not found
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/control-api.yaml#/components/schemas/ErrorResponse
+              examples:
+                clientNotFound:
+                  value:
+                    message: "Client not found or inactive"
+                workspaceNotFound:
+                  value:
+                    message: "Workspace not found"
+        "500":
+          $ref: ../../packages/openapi-components/control-api.yaml#/components/responses/InternalServerError
+
+  /auth/session:
+    post:
+      summary: Create a user session (login)
+      operationId: createUserSession
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  description: User's username or email.
+                password:
+                  type: string
+                  minLength: 8
+                  description: User's password.
+                  writeOnly: true
+                workspace_id:
+                  type: string
+                  description: Workspace context (required only when AUTH_REQUIRE_USER_WORKSPACE=true).
+            examples:
+              login:
+                value:
+                  username: "operator@example.com"
+                  password: "password123"
+                  workspace_id: "workspace-acme"
+      responses:
+        "201":
+          description: Session created successfully
+          headers:
+            x-request-id:
+              $ref: ../../packages/openapi-components/control-api.yaml#/components/headers/RequestId
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - sessionId
+                  - token
+                  - expiresIn
+                  - expiresAt
+                  - user
+                properties:
+                  sessionId:
+                    type: string
+                    format: uuid
+                  token:
+                    type: string
+                    description: HS256 JWT token.
+                  expiresIn:
+                    type: integer
+                    description: Token expiration in seconds.
+                    example: 3600
+                  expiresAt:
+                    type: string
+                    format: date-time
+                  user:
+                    type: object
+                    required:
+                      - id
+                      - roles
+                      - workspace_id
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                        description: User identifier.
+                      roles:
+                        type: array
+                        items:
+                          type: string
+                        description: User roles.
+                      workspace_id:
+                        type: string
+                        nullable: true
+                        description: Active workspace for this session (null if no workspace selected).
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/control-api.yaml#/components/schemas/ErrorResponse
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/control-api.yaml#/components/schemas/ErrorResponse
+              example:
+                message: "Invalid credentials"
+        "404":
+          description: User or workspace not found
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/control-api.yaml#/components/schemas/ErrorResponse
+              examples:
+                userNotFound:
+                  value:
+                    message: "User not found or inactive"
+                workspaceNotFound:
+                  value:
+                    message: "Workspace not found"
+        "500":
+          $ref: ../../packages/openapi-components/control-api.yaml#/components/responses/InternalServerError
+
+  /auth/register:
+    post:
+      summary: Register a new user
+      operationId: registerUser
+      tags:
+        - Authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - password
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 50
+                  pattern: "^[a-zA-Z0-9._-]+$"
+                  description: Unique username.
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+                  description: User password.
+                  writeOnly: true
+                firstName:
+                  type: string
+                  maxLength: 100
+                  description: User's first name.
+                lastName:
+                  type: string
+                  maxLength: 100
+                  description: User's last name.
+            examples:
+              register:
+                value:
+                  username: "newuser"
+                  password: "securePass123"
+                  firstName: "John"
+                  lastName: "Doe"
+      responses:
+        "201":
+          description: User registered successfully and session created
+          headers:
+            x-request-id:
+              $ref: ../../packages/openapi-components/control-api.yaml#/components/headers/RequestId
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - sessionId
+                  - token
+                  - expiresIn
+                  - expiresAt
+                  - user
+                  - workspace_id
+                properties:
+                  sessionId:
+                    type: string
+                    format: uuid
+                  token:
+                    type: string
+                    description: HS256 JWT token.
+                  expiresIn:
+                    type: integer
+                    example: 3600
+                  expiresAt:
+                    type: string
+                    format: date-time
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      roles:
+                        type: array
+                        items:
+                          type: string
+                      workspace_id:
+                        type: string
+                        description: Default workspace created for the user.
+                  workspace_id:
+                    type: string
+                    description: Default workspace identifier.
+        "400":
+          description: Invalid input (username taken, weak password, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/control-api.yaml#/components/schemas/ErrorResponse
+        "500":
+          $ref: ../../packages/openapi-components/control-api.yaml#/components/responses/InternalServerError
+
+  /auth/refresh:
+    post:
+      summary: Refresh an existing session and issue a new token
+      operationId: refreshSession
+      tags:
+        - Authentication
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: Authorization
+          in: header
+          description: Bearer token to refresh.
+          schema:
+            type: string
+            example: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        - name: x-session-token
+          in: header
+          description: Alternative header for token (if not using Authorization).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Session refreshed successfully
+          headers:
+            x-request-id:
+              $ref: ../../packages/openapi-components/control-api.yaml#/components/headers/RequestId
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - sessionId
+                  - token
+                  - expiresIn
+                  - expiresAt
+                  - principal
+                properties:
+                  sessionId:
+                    type: string
+                    format: uuid
+                  token:
+                    type: string
+                    description: New HS256 JWT token.
+                  expiresIn:
+                    type: integer
+                    example: 3600
+                  expiresAt:
+                    type: string
+                    format: date-time
+                  principal:
+                    type: object
+                    description: Principal details (client or user).
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      type:
+                        type: string
+                        enum: [client, user]
+                      active_workspace_id:
+                        type: string
+                        nullable: true
+                      memberships:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            workspace_id:
+                              type: string
+                            role:
+                              type: string
+                              enum: [owner, admin, member]
+                      scopes:
+                        type: array
+                        items:
+                          type: string
+        "401":
+          description: Invalid, expired, or missing token
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/control-api.yaml#/components/schemas/ErrorResponse
+              examples:
+                tokenExpired:
+                  value:
+                    message: "Token expired"
+                invalidToken:
+                  value:
+                    message: "Invalid token"
+        "404":
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                $ref: ../../packages/openapi-components/control-api.yaml#/components/schemas/ErrorResponse
+              example:
+                message: "Session not found"
+        "500":
+          $ref: ../../packages/openapi-components/control-api.yaml#/components/responses/InternalServerError
+
+components:
+  securitySchemes:
+    BearerAuth:
+      $ref: ../../packages/openapi-components/control-api.yaml#/components/securitySchemes/BearerAuth
+
+tags:
+  - name: Authentication
+    description: Token issuance, user login/registration, and session management

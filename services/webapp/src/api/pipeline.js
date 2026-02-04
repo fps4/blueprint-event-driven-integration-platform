@@ -34,8 +34,22 @@ export async function updatePipeline(id, payload) {
 
 export async function getPipeline(id, signal) {
   if (!id) throw new Error('Pipeline id is required');
-  const items = await listPipelines(signal);
-  const match = items.find((p) => p.id === id);
-  if (!match) throw new Error('Pipeline not found');
-  return match;
+  try {
+    const res = await axiosInstance.get(`/api/pipelines/${id}`, { signal });
+    const p = res.data ?? {};
+    return {
+      id: p._id ?? p.id ?? id,
+      name: p.name ?? 'Untitled pipeline',
+      status: p.status ?? 'unknown',
+      description: p.description ?? '',
+      workspaceId: p.workspaceId ?? p.workspace ?? '',
+      sourceTopic: p.sourceTopic,
+      targetTopic: p.targetTopic,
+    };
+  } catch (err) {
+    if (err?.response?.status === 404) {
+      throw new Error('Pipeline not found');
+    }
+    throw err;
+  }
 }

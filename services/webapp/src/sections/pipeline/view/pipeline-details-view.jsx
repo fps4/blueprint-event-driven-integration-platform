@@ -1,43 +1,65 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect } from 'react';
 
 import Card from '@mui/material/Card';
-import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import MenuItem from '@mui/material/MenuItem';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import CardHeader from '@mui/material/CardHeader';
 
 import { paths } from 'src/routes/paths';
-import { useRouter } from 'src/routes/hooks';
 
-import { getPipeline, updatePipeline } from 'src/api/pipeline';
-import { getWorkspace, listWorkspaces } from 'src/api/workspace';
+import { getPipeline } from 'src/api/pipeline';
+import { DashboardContent } from 'src/layouts/dashboard';
 
-import { Form, Field } from 'src/components/hook-form';
+import { CustomBreadcrumbs } from 'src/components/custom-breadcrumbs';
 
 export function PipelineDetailsView({ pipelineId }) {
   const [pipeline, setPipeline] = useState(null);
-  const [workspaces, setWorkspaces] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError(null);
+    getPipeline(pipelineId, controller.signal)
+      .then((item) => setPipeline(item))
+      .catch((err) => {
+        if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') return;
+        setError(err?.message || 'Failed to load pipeline');
+      })
+      .finally(() => setLoading(false));
+    return () => controller.abort();
+  }, [pipelineId]);
 
   return (
-    <Stack spacing={3}>
-      <Stack spacing={0.5}>
-        <Typography variant="h4">{pipeline?.name || 'Pipeline'}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {workspaces.find((w) => w.id === (pipeline?.workspaceId || pipeline?.workspace))?.name ||
-            'Workspace'}
-        </Typography>
-      </Stack>
+    <DashboardContent>
+      <CustomBreadcrumbs
+        heading={pipeline?.name || 'Pipeline'}
+        links={[
+          { name: 'Dashboard', href: paths.dashboard.root },
+          { name: 'Pipelines', href: paths.dashboard.pipeline.root },
+          { name: pipeline?.name || 'Details' },
+        ]}
+        sx={{ mb: { xs: 3, md: 5 } }}
+      />
 
-      <Card sx={{ minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Typography variant="body2" color="text.secondary">
-          React Flow canvas placeholder
+      {error && (
+        <Typography color="error" sx={{ mb: 2 }}>
+          {error}
         </Typography>
+      )}
+
+      <Card sx={{ minHeight: 400, p: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {loading ? (
+          <Typography variant="body2" color="text.secondary">
+            Loading pipeline...
+          </Typography>
+        ) : (
+          <Typography variant="body2" color="text.secondary">
+            Pipeline form placeholder
+          </Typography>
+        )}
       </Card>
-    </Stack>
+    </DashboardContent>
   );
 }
