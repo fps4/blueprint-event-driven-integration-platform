@@ -8,17 +8,17 @@ import Chip from '@mui/material/Chip';
 
 import { getNodeStyle } from './shared-node-styles';
 
-export function SourceConnectorNode({ data }) {
+export function SinkConnectorNode({ data }) {
   const { connectorType, description } = data;
 
   return (
-    <Card sx={getNodeStyle('sourceConnector')}>
+    <Card sx={getNodeStyle('sinkConnector')}>
       <Handle type="target" position={Position.Left} />
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'center', justifyContent: 'center', height: '100%' }}>
         <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'uppercase', fontSize: '0.65rem' }}>
-          Source Connector
+          Sink Connector
         </Typography>
-        <Chip label={connectorType} size="small" color="success" />
+        <Chip label={connectorType} size="small" color="info" />
         {description && (
           <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', fontSize: '0.7rem' }}>
             {description}

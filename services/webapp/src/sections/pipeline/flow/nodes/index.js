@@ -3,3 +3,8 @@ export { StreamNode } from './stream-node';
 export { ClientNode } from './client-node';
 export { SourceConnectorNode } from './source-connector-node';
 export { AddSourceConnectorNode } from './add-source-connector-node';
+export { ConnectionNode } from './connection-node';
+export { SinkConnectorNode } from './sink-connector-node';
+export { AddSinkConnectorNode } from './add-sink-connector-node';
+export { TransformationNode } from './transformation-node';
+export { AddTransformationNode } from './add-transformation-node';

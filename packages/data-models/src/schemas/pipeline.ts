@@ -4,7 +4,7 @@ export type PipelineStatus = 'draft' | 'active' | 'paused' | 'failed';
 
 export interface StreamDefinition {
   topic: string;
-  type: 'source' | 'sink';
+  type: 'source' | 'sink' | 'dlq' | 'replay';
   description?: string;
 }
 
@@ -24,8 +24,16 @@ export interface ConnectionConfigRef {
 }
 
 export interface TransformConfig {
-  type: 'jsonata';
-  transformId: string;
+  type: 'JSONata';
+  sourceStream: string;
+  targetStream: string;
+  failureQueue?: string;
+  expression: string;
+  description?: string;
+}
+
+export interface NodePositions {
+  [nodeId: string]: { x: number; y: number };
 }
 
 export interface PipelineDocument extends Document<string> {
@@ -39,13 +47,14 @@ export interface PipelineDocument extends Document<string> {
   sourceClients: ClientConfigRef[];
   sinkConnections: ConnectionConfigRef[];
   transform?: TransformConfig;
+  nodePositions?: NodePositions;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
 const streamDefinitionSchema = new mongoose.Schema({
   topic: { type: String, required: true, trim: true },
-  type: { type: String, enum: ['source', 'sink'], required: true },
+  type: { type: String, enum: ['source', 'sink', 'dlq', 'replay'], required: true },
   description: { type: String }
 }, { _id: false });
 
@@ -65,8 +74,12 @@ const connectionConfigRefSchema = new mongoose.Schema({
 }, { _id: false });
 
 const transformConfigSchema = new mongoose.Schema({
-  type: { type: String, enum: ['jsonata'], required: true },
-  transformId: { type: String, required: true, trim: true }
+  type: { type: String, enum: ['JSONata'], required: true },
+  sourceStream: { type: String, required: true, trim: true },
+  targetStream: { type: String, required: true, trim: true },
+  failureQueue: { type: String, trim: true },
+  expression: { type: String, required: true, trim: true },
+  description: { type: String }
 }, { _id: false });
 
 export const pipelineSchema = new mongoose.Schema({
@@ -80,6 +93,7 @@ export const pipelineSchema = new mongoose.Schema({
   sourceClients: { type: [clientConfigRefSchema], default: [] },
   sinkConnections: { type: [connectionConfigRefSchema], default: [] },
   transform: { type: transformConfigSchema, default: null },
+  nodePositions: { type: mongoose.Schema.Types.Mixed, default: {} },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 }, {

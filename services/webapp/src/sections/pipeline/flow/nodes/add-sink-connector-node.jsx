@@ -6,7 +6,7 @@ import IconButton from '@mui/material/IconButton';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import Typography from '@mui/material/Typography';
 
-export function AddSourceConnectorNode({ data }) {
+export function AddSinkConnectorNode({ data }) {
   const isDisabled = data?.disabled || false;
 
   const handleClick = (e) => {
@@ -32,14 +32,14 @@ export function AddSourceConnectorNode({ data }) {
         cursor: isDisabled ? 'not-allowed' : 'pointer',
         opacity: isDisabled ? 0.5 : 1,
         '&:hover': isDisabled ? {} : {
-          borderColor: 'success.main',
+          borderColor: 'info.main',
           bgcolor: 'action.hover',
         },
       }}
       onClick={handleClick}
     >
       <IconButton 
-        color="success" 
+        color="info" 
         size="large" 
         onClick={handleClick}
         disabled={isDisabled}
@@ -47,7 +47,7 @@ export function AddSourceConnectorNode({ data }) {
         <AddCircleOutlineIcon fontSize="large" />
       </IconButton>
       <Typography variant="body2" color={isDisabled ? 'text.disabled' : 'text.secondary'} onClick={handleClick}>
-        Add Source Connector
+        Add Sink Connector
       </Typography>
       <Handle type="source" position={Position.Bottom} style={{ visibility: 'hidden' }} />
     </Box>

@@ -66,6 +66,7 @@ export function pipelineRoutes() {
       workspaceCode: workspace?.code || '',
       sourceClients: enrichedSourceClients,
       sinkConnections: enrichedSinkConnections,
+      nodePositions: doc.nodePositions || {},
     };
     
     res.json(response);
@@ -143,6 +144,10 @@ export function pipelineRoutes() {
 
     if (req.body?.transform !== undefined) {
       updates.transform = req.body.transform || null;
+    }
+
+    if (req.body?.nodePositions !== undefined) {
+      updates.nodePositions = req.body.nodePositions || {};
     }
 
     const doc = await Pipeline.findOneAndUpdate(

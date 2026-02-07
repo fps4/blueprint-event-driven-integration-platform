@@ -36,7 +36,7 @@ export function PipelineDetailsView({ pipelineId }) {
   return (
     <DashboardContent>
       <CustomBreadcrumbs
-        heading={pipeline?.name ? `${pipeline.name} ${pipeline.code ? `(${pipeline.code})` : ''}` : 'Pipeline'}
+        heading={pipeline?.name ? `${pipeline.name}` : 'Pipeline'}
         links={[
           { name: 'Dashboard', href: paths.dashboard.root },
           { name: 'Pipelines', href: paths.dashboard.pipeline.root },
