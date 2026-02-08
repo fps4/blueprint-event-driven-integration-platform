@@ -41,6 +41,7 @@ const ICONS = {
   user: icon('users-group-two-rounded-svgrepo-com'),
   wiki: icon('document-1-svgrepo-com'),
   connection: icon('logout-svgrepo-com'),
+  infrastructure: icon('code-square-svgrepo-com'),
 
 };
 
@@ -67,13 +68,29 @@ export const navData = [
     ],
   },
   /**
-   * Management
+   * Operations
    */
   {
-    subheader: 'Wiki',
+    subheader: 'Operations',
     items: [
       {
-        title: 'Docs',
+        title: 'Infrastructure',
+        path: paths.dashboard.operations.root,
+        icon: ICONS.infrastructure,
+        children: [
+          { title: 'Logs', path: paths.dashboard.operations.logs },
+        ],
+      },
+    ],
+  },
+  /**
+   * Documentation
+   */
+  {
+    subheader: 'Manuals & Guides',
+    items: [
+      {
+        title: 'User Manual',
         path: paths.dashboard.group.root,
         icon: ICONS.wiki,
         children: [
